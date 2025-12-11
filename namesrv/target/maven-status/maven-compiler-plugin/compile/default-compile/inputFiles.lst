@@ -1,8 +1,0 @@
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\routeinfo\RouteInfoManager.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\NamesrvController.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\routeinfo\BrokerHousekeepingService.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\kvconfig\KVConfigManager.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\NamesrvStartup.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\processor\ClusterTestRequestProcessor.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\kvconfig\KVConfigSerializeWrapper.java
-D:\github\rocketmq-all-4.9.4-source-release\namesrv\src\main\java\org\apache\rocketmq\namesrv\processor\DefaultRequestProcessor.java
