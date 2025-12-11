@@ -1,0 +1,3 @@
+# 排除所有 target 文件夹
+target/
+
