@@ -241,10 +241,17 @@ public class BrokerController {
     }
 
     public boolean initialize() throws CloneNotSupportedException {
+        // 首先会去加载 broker 的一些元数据，从磁盘读取json文件加载到 内存
+        // storePathRootDir = xxx/store 实际会去使用 config 的子文件夹
+
+        // 1. 加载 Topic 配置 (topics.json)
         boolean result = this.topicConfigManager.load();
 
+        // 2. 加载消费进度 (consumerOffset.json)
         result = result && this.consumerOffsetManager.load();
+        // 3. 加载订阅组配置 (subscriptionGroup.json)
         result = result && this.subscriptionGroupManager.load();
+        // 4. 加载消费者过滤配置 (consumerFilter.json)
         result = result && this.consumerFilterManager.load();
 
         if (result) {
@@ -346,6 +353,7 @@ public class BrokerController {
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
 
+            // 注册各种处理器，决定了 Broker 收到各种请求之后由谁来处理
             this.registerProcessor();
 
             final long initialDelay = UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis();
@@ -549,6 +557,9 @@ public class BrokerController {
         sendProcessor.registerSendMessageHook(sendMessageHookList);
         sendProcessor.registerConsumeMessageHook(consumeMessageHookList);
 
+        // RequestCode.SEND_MESSAGE 入参，决定使用什么processor 
+        // sendProcessor 处理器
+        // this.sendMessageExecutor 上一步注册的用来执行并发任务的线程池
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE, sendProcessor, this.sendMessageExecutor);
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE_V2, sendProcessor, this.sendMessageExecutor);
         this.remotingServer.registerProcessor(RequestCode.SEND_BATCH_MESSAGE, sendProcessor, this.sendMessageExecutor);
@@ -894,11 +905,13 @@ public class BrokerController {
             @Override
             public void run() {
                 try {
+                    // 注册心跳
                     BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
                 } catch (Throwable e) {
                     log.error("registerBrokerAll Exception", e);
                 }
             }
+            // 首次执行 10s 之后，每隔 30s 执行一次，最小间隔 10s，最大间隔 60s
         }, 1000 * 10, Math.max(10000, Math.min(brokerConfig.getRegisterNameServerPeriod(), 60000)), TimeUnit.MILLISECONDS);
 
         if (this.brokerStatsManager != null) {
@@ -930,6 +943,7 @@ public class BrokerController {
         doRegisterBrokerAll(true, false, topicConfigSerializeWrapper);
     }
 
+    // 心跳注册的实现
     public synchronized void registerBrokerAll(final boolean checkOrderConfig, boolean oneway, boolean forceRegister) {
         TopicConfigSerializeWrapper topicConfigWrapper = this.getTopicConfigManager().buildTopicConfigSerializeWrapper();
 
@@ -945,6 +959,8 @@ public class BrokerController {
             topicConfigWrapper.setTopicConfigTable(topicConfigTable);
         }
 
+        // forceRegister 强制注册，首次启动时为 true
+        // needRegister 查询所有的 namesrv，和自己的数据对比，不一致则注册
         if (forceRegister || needRegister(this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),
             this.brokerConfig.getBrokerName(),

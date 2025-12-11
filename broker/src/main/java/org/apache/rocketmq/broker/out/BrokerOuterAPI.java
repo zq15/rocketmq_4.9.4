@@ -286,6 +286,7 @@ public class BrokerOuterAPI {
                                 byte[] body = response.getBody();
                                 if (body != null) {
                                     nameServerDataVersion = DataVersion.decode(body, DataVersion.class);
+                                    // 如果 nameServer 的数据版本和自己的数据版本不一致，则需要注册
                                     if (!topicConfigWrapper.getDataVersion().equals(nameServerDataVersion)) {
                                         changed = true;
                                     }

@@ -89,6 +89,7 @@ public class BrokerStartup {
     public static BrokerController createBrokerController(String[] args) {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
+        // 这里的 args 是main方法中传过来的程序参数，这里是 -c D:/github\rocketmqnamesrv/store/conf/broker.conf
         try {
             //PackageConflictDetect.detectFastjson();
             Options options = ServerUtil.buildCommandlineOptions(new Options());
@@ -98,6 +99,7 @@ public class BrokerStartup {
                 System.exit(-1);
             }
 
+            // 读取四个配置文件的固定值
             final BrokerConfig brokerConfig = new BrokerConfig();
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
@@ -112,6 +114,7 @@ public class BrokerStartup {
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }
 
+            // 解析这里的 -c D:/github\rocketmqnamesrv/store/conf/broker.conf
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
@@ -131,13 +134,16 @@ public class BrokerStartup {
                 }
             }
 
+            // 读取命令行参数的配置，覆盖默认配置
             MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
 
+            // 检查 rocketmq_home 是否设置
             if (null == brokerConfig.getRocketmqHome()) {
                 System.out.printf("Please set the %s variable in your environment to match the location of the RocketMQ installation", MixAll.ROCKETMQ_HOME_ENV);
                 System.exit(-2);
             }
 
+            // 检查 namesrv addr，可以为多个，校验格式是否为 ip:port;ip:port 格式
             String namesrvAddr = brokerConfig.getNamesrvAddr();
             if (null != namesrvAddr) {
                 try {
@@ -153,13 +159,14 @@ public class BrokerStartup {
                 }
             }
 
+            // 检查 broker role
             switch (messageStoreConfig.getBrokerRole()) {
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
-                    brokerConfig.setBrokerId(MixAll.MASTER_ID);
+                    brokerConfig.setBrokerId(MixAll.MASTER_ID); // 同步 master 设置 broker id 为 0
                     break;
-                case SLAVE:
-                    if (brokerConfig.getBrokerId() <= 0) {
+                case SLAVE: 
+                    if (brokerConfig.getBrokerId() <= 0) { // 从节点设置 broker id 必须大于 0
                         System.out.printf("Slave's brokerId must be > 0");
                         System.exit(-3);
                     }
@@ -169,11 +176,13 @@ public class BrokerStartup {
                     break;
             }
 
+            // 如果启动 dledger，则设置 broker id 为 -1
             if (messageStoreConfig.isEnableDLegerCommitLog()) {
                 brokerConfig.setBrokerId(-1);
             }
 
             messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
+            // 加载配置文件
             LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
             JoranConfigurator configurator = new JoranConfigurator();
             configurator.setContext(lc);
@@ -209,6 +218,7 @@ public class BrokerStartup {
             MixAll.printObjectProperties(log, nettyClientConfig);
             MixAll.printObjectProperties(log, messageStoreConfig);
 
+            // 创建 BrokerController 对象
             final BrokerController controller = new BrokerController(
                 brokerConfig,
                 nettyServerConfig,
@@ -223,6 +233,7 @@ public class BrokerStartup {
                 System.exit(-3);
             }
 
+            // 添加 shutdown hook
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;
                 private AtomicInteger shutdownTimes = new AtomicInteger(0);
