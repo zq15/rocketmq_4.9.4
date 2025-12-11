@@ -1,3 +1,6 @@
 # 排除所有 target 文件夹
 target/
 
+# 排除 .idea 文件夹
+.idea/
+
