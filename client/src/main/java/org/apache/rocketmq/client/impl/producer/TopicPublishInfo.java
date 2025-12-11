@@ -26,8 +26,10 @@ import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 public class TopicPublishInfo {
     private boolean orderTopic = false;
     private boolean haveTopicRouterInfo = false;
+    // 该topic下所有可写的队列
     private List<MessageQueue> messageQueueList = new ArrayList<MessageQueue>();
     private volatile ThreadLocalIndex sendWhichQueue = new ThreadLocalIndex();
+    // 路由数据 QueueData MessageData
     private TopicRouteData topicRouteData;
 
     public boolean isOrderTopic() {
@@ -67,7 +69,7 @@ public class TopicPublishInfo {
     }
 
     public MessageQueue selectOneMessageQueue(final String lastBrokerName) {
-        if (lastBrokerName == null) {
+        if (lastBrokerName == null) { // 第一次投递失败以后会有值
             return selectOneMessageQueue();
         } else {
             for (int i = 0; i < this.messageQueueList.size(); i++) {
@@ -85,6 +87,8 @@ public class TopicPublishInfo {
     }
 
     public MessageQueue selectOneMessageQueue() {
+        // 获取一个随机值然后+1 ，然后对队列数量取模，得到一个队列id，可以实现一个轮询的逻辑
+        // 这个index和Producer的线程关联
         int index = this.sendWhichQueue.incrementAndGet();
         int pos = Math.abs(index) % this.messageQueueList.size();
         if (pos < 0)

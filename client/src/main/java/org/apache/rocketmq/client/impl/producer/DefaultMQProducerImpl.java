@@ -193,6 +193,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 this.checkConfig();
 
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
+                    // 计算当前实例的名称 -> pid+纳秒时间戳
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
 
@@ -551,11 +552,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             MessageQueue mq = null;
             Exception exception = null;
             SendResult sendResult = null;
+            // 重试机制 如果是同步，总次数1 + getRetryTimesWhenSendFailed（2）
             int timesTotal = communicationMode == CommunicationMode.SYNC ? 1 + this.defaultMQProducer.getRetryTimesWhenSendFailed() : 1;
             int times = 0;
             String[] brokersSent = new String[timesTotal];
             for (; times < timesTotal; times++) {
                 String lastBrokerName = null == mq ? null : mq.getBrokerName();
+                // MessageQueue 的选择逻辑
                 MessageQueue mqSelected = this.selectOneMessageQueue(topicPublishInfo, lastBrokerName);
                 if (mqSelected != null) {
                     mq = mqSelected;
@@ -572,6 +575,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                             break;
                         }
 
+                        // 真正发送消息
                         sendResult = this.sendKernelImpl(msg, mq, communicationMode, sendCallback, topicPublishInfo, timeout - costTime);
                         endTimestamp = System.currentTimeMillis();
                         this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, false);
@@ -717,8 +721,11 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
                 int sysFlag = 0;
                 boolean msgBodyCompressed = false;
+                // 压缩消息
                 if (this.tryToCompressMessage(msg)) {
+                    // 使用 |= 按位或操作，设置压缩标志位（不覆盖其他标志）
                     sysFlag |= MessageSysFlag.COMPRESSED_FLAG;
+                    // 设置压缩类型标志位
                     sysFlag |= compressType.getCompressionFlag();
                     msgBodyCompressed = true;
                 }
@@ -761,15 +768,23 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     this.executeSendMessageHookBefore(context);
                 }
 
+                // 设置消息头
                 SendMessageRequestHeader requestHeader = new SendMessageRequestHeader();
+                // 生产者组的名称
                 requestHeader.setProducerGroup(this.defaultMQProducer.getProducerGroup());
+                // topic的名称
                 requestHeader.setTopic(msg.getTopic());
                 requestHeader.setDefaultTopic(this.defaultMQProducer.getCreateTopicKey());
+                // 默认的queue数量，值为4
                 requestHeader.setDefaultTopicQueueNums(this.defaultMQProducer.getDefaultTopicQueueNums());
+                // 当前消息投递的目标queue的Id
                 requestHeader.setQueueId(mq.getQueueId());
+                // 记录了一些标记，例如当前Message是否被压缩过
                 requestHeader.setSysFlag(sysFlag);
+                // 可以理解为消息创建时间
                 requestHeader.setBornTimestamp(System.currentTimeMillis());
                 requestHeader.setFlag(msg.getFlag());
+                // 之前讲过的，比如像订阅的tag数据，就会存在这里
                 requestHeader.setProperties(MessageDecoder.messageProperties2String(msg.getProperties()));
                 requestHeader.setReconsumeTimes(0);
                 requestHeader.setUnitMode(this.isUnitMode());
@@ -898,7 +913,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
         byte[] body = msg.getBody();
         if (body != null) {
-            if (body.length >= this.defaultMQProducer.getCompressMsgBodyOverHowmuch()) {
+            if (body.length >= this.defaultMQProducer.getCompressMsgBodyOverHowmuch()) { // 1024 * 4 大于4k
                 try {
                     byte[] data = compressor.compress(body, compressLevel);
                     if (data != null) {
