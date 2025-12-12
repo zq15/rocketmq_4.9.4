@@ -79,6 +79,7 @@ public class NamesrvStartup {
             return null;
         }
 
+        // 主要是这两个配置
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         nettyServerConfig.setListenPort(9876);
@@ -137,6 +138,7 @@ public class NamesrvStartup {
             throw new IllegalArgumentException("NamesrvController is null");
         }
 
+        // 初始化关键步骤
         boolean initResult = controller.initialize();
         if (!initResult) {
             controller.shutdown();

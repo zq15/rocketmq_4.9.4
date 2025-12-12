@@ -49,6 +49,7 @@ public class NamesrvController {
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "NSScheduledThread"));
     private final KVConfigManager kvConfigManager;
+    // 存储很多Map，包含活跃的 broker，topic 信息
     private final RouteInfoManager routeInfoManager;
 
     private RemotingServer remotingServer;
@@ -74,16 +75,19 @@ public class NamesrvController {
     }
 
     public boolean initialize() {
-
+        // 加载配置
         this.kvConfigManager.load();
-
+        // 启动服务
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
-
+        // 注册处理器
         this.registerProcessor();
-
+        // 注册各种定时任务
+        // 清理下线的 broker
+        // namesrv 每 10s 检查
+        // broker 每 30s 发送心跳
         this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.routeInfoManager::scanNotActiveBroker, 5, 10, TimeUnit.SECONDS);
 
         this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.kvConfigManager::printAllPeriodically, 1, 10, TimeUnit.MINUTES);
