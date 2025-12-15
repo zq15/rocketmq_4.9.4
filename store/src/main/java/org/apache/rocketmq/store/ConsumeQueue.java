@@ -485,9 +485,9 @@ public class ConsumeQueue {
 
         this.byteBufferIndex.flip();
         this.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE);
-        this.byteBufferIndex.putLong(offset);
-        this.byteBufferIndex.putInt(size);
-        this.byteBufferIndex.putLong(tagsCode);
+        this.byteBufferIndex.putLong(offset); // commitLog 偏移量
+        this.byteBufferIndex.putInt(size); // 消息体长度
+        this.byteBufferIndex.putLong(tagsCode); // 消息tag的hash,延时消息，存储时间戳
 
         final long expectLogicOffset = cqOffset * CQ_STORE_UNIT_SIZE;
 

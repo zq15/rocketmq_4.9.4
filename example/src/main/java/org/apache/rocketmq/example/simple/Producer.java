@@ -30,11 +30,11 @@ public class Producer {
 
         producer.start();
 
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < 16; i++)
             try {
                 {
                     Message msg = new Message("TopicTest",
-                        "TagA",
+                        "TagB",
                         "OrderID188",
                         "Hello world".getBytes(RemotingHelper.DEFAULT_CHARSET));
                     SendResult sendResult = producer.send(msg);

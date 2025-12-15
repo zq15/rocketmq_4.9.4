@@ -38,12 +38,12 @@ import org.apache.rocketmq.remoting.netty.NettyServerConfig;
 import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.srvutil.FileWatchService;
 
-
+// namesrv 核心控制器 -> 负责初始化和管理所有的组件
 public class NamesrvController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
+    // 核心配置
     private final NamesrvConfig namesrvConfig;
-
     private final NettyServerConfig nettyServerConfig;
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
@@ -52,6 +52,7 @@ public class NamesrvController {
     // 存储很多Map，包含活跃的 broker，topic 信息
     private final RouteInfoManager routeInfoManager;
 
+    // 启动服务的 nettyServer
     private RemotingServer remotingServer;
 
     private BrokerHousekeepingService brokerHousekeepingService;
