@@ -30,6 +30,9 @@ public class ConsumeConcurrentlyContext {
      * >0,client control retry frequency
      */
     private int delayLevelWhenNextConsume = 0;
+    /**
+     * 成功消费到的最后一条消息的索引，默认值是极大值
+     */
     private int ackIndex = Integer.MAX_VALUE;
 
     public ConsumeConcurrentlyContext(MessageQueue messageQueue) {
