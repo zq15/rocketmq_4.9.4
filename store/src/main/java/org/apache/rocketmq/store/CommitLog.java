@@ -626,8 +626,8 @@ public class CommitLog {
                     msg.setDelayTimeLevel(this.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());
                 }
 
-                topic = TopicValidator.RMQ_SYS_SCHEDULE_TOPIC;
-                int queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel());
+                topic = TopicValidator.RMQ_SYS_SCHEDULE_TOPIC; // SCHEDULE_TOPIC_XXXX
+                int queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel()); // 队列id delayLevel - 1
 
                 // Backup real topic, queueId
                 MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());

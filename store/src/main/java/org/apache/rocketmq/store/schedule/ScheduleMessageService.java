@@ -132,6 +132,7 @@ public class ScheduleMessageService extends ConfigManager {
             if (this.enableAsyncDeliver) {
                 this.handleExecutorService = new ScheduledThreadPoolExecutor(this.maxDelayLevel, new ThreadFactoryImpl("ScheduleMessageExecutorHandleThread_"));
             }
+            // 为每个延迟级别启动一个定时任务
             for (Map.Entry<Integer, Long> entry : this.delayLevelTable.entrySet()) {
                 Integer level = entry.getKey();
                 Long timeDelay = entry.getValue();
@@ -308,6 +309,7 @@ public class ScheduleMessageService extends ConfigManager {
         return true;
     }
 
+    // 消息重新投递
     private MessageExtBrokerInner messageTimeup(MessageExt msgExt) {
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
         msgInner.setBody(msgExt.getBody());
@@ -327,6 +329,7 @@ public class ScheduleMessageService extends ConfigManager {
         msgInner.setReconsumeTimes(msgExt.getReconsumeTimes());
 
         msgInner.setWaitStoreMsgOK(false);
+        // 清除消息的延迟属性，并重新投递到真实队列
         MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_DELAY_TIME_LEVEL);
 
         msgInner.setTopic(msgInner.getProperty(MessageConst.PROPERTY_REAL_TOPIC));
@@ -375,7 +378,9 @@ public class ScheduleMessageService extends ConfigManager {
             return result;
         }
 
+        // 扫描消息是否到期
         public void executeOnTimeup() {
+            // 查找消息对应的延迟队列
             ConsumeQueue cq =
                 ScheduleMessageService.this.defaultMessageStore.findConsumeQueue(TopicValidator.RMQ_SYS_SCHEDULE_TOPIC,
                     delayLevel2QueueId(delayLevel));
@@ -418,6 +423,7 @@ public class ScheduleMessageService extends ConfigManager {
                             //can't find ext content.So re compute tags code.
                             log.error("[BUG] can't find consume queue extend file content!addr={}, offsetPy={}, sizePy={}",
                                 tagsCode, offsetPy, sizePy);
+                            // 扫描消息判断是否到期
                             long msgStoreTime = defaultMessageStore.getCommitLog().pickupStoreTimestamp(offsetPy, sizePy);
                             tagsCode = computeDeliverTimestamp(delayLevel, msgStoreTime);
                         }
@@ -446,6 +452,7 @@ public class ScheduleMessageService extends ConfigManager {
                     }
 
                     boolean deliverSuc;
+                    // 投递消息
                     if (ScheduleMessageService.this.enableAsyncDeliver) {
                         deliverSuc = this.asyncDeliver(msgInner, msgExt.getMsgId(), nextOffset, offsetPy, sizePy);
                     } else {
