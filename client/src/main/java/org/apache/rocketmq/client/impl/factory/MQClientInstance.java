@@ -260,7 +260,7 @@ public class MQClientInstance {
                 @Override
                 public void run() {
                     try {
-                        MQClientInstance.this.mQClientAPIImpl.fetchNameServerAddr();
+                        MQClientInstance.this.mQClientAPIImpl.fetchNameServerAddr(); // 定时拉取 namesrv 地址
                     } catch (Exception e) {
                         log.error("ScheduledTask fetchNameServerAddr exception", e);
                     }
@@ -273,7 +273,7 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
-                    MQClientInstance.this.updateTopicRouteInfoFromNameServer();
+                    MQClientInstance.this.updateTopicRouteInfoFromNameServer(); // 从 namesrv 定时同步 topic 路由表
                 } catch (Exception e) {
                     log.error("ScheduledTask updateTopicRouteInfoFromNameServer exception", e);
                 }
@@ -285,8 +285,8 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
-                    MQClientInstance.this.cleanOfflineBroker();
-                    MQClientInstance.this.sendHeartbeatToAllBrokerWithLock();
+                    MQClientInstance.this.cleanOfflineBroker(); // 清理下线的 broker
+                    MQClientInstance.this.sendHeartbeatToAllBrokerWithLock(); // 发送心跳
                 } catch (Exception e) {
                     log.error("ScheduledTask sendHeartbeatToAllBroker exception", e);
                 }
@@ -298,7 +298,7 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
-                    MQClientInstance.this.persistAllConsumerOffset();
+                    MQClientInstance.this.persistAllConsumerOffset(); // 定期持久化消费进度
                 } catch (Exception e) {
                     log.error("ScheduledTask persistAllConsumerOffset exception", e);
                 }

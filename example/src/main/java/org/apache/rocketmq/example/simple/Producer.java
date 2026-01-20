@@ -30,7 +30,7 @@ public class Producer {
 
         producer.start();
 
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 2; i++)
             try {
                 {
                     Message msg = new Message("TopicTest",
