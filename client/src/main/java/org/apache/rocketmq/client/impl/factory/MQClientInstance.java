@@ -112,8 +112,8 @@ public class MQClientInstance {
         }
     });
     private final ClientRemotingProcessor clientRemotingProcessor;
-    private final PullMessageService pullMessageService;
-    private final RebalanceService rebalanceService;
+    private final PullMessageService pullMessageService; // 消息拉取服务
+    private final RebalanceService rebalanceService; // 负载均衡服务
     private final DefaultMQProducer defaultMQProducer;
     private final ConsumerStatsManager consumerStatsManager;
     private final AtomicLong sendHeartbeatTimesTotal = new AtomicLong(0);
@@ -222,6 +222,7 @@ public class MQClientInstance {
         return mqList;
     }
 
+    // producer 和 consumer 都会启动
     public void start() throws MQClientException {
 
         synchronized (this) {
@@ -237,7 +238,7 @@ public class MQClientInstance {
                     // Start various schedule tasks
                     this.startScheduledTask();
                     // Start pull service
-                    this.pullMessageService.start();
+                    this.pullMessageService.start(); // 开始拉取消息
                     // Start rebalance service
                     this.rebalanceService.start();
                     // Start push service

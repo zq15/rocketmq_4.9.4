@@ -56,6 +56,7 @@ public class PullMessageService extends ServiceThread {
         }
     }
 
+    // 最终调用到去拉取消息的位置
     public void executePullRequestImmediately(final PullRequest pullRequest) {
         try {
             this.pullRequestQueue.put(pullRequest);
@@ -87,13 +88,13 @@ public class PullMessageService extends ServiceThread {
     }
 
     @Override
-    public void run() {
+    public void run() { // 开始拉取消息
         log.info(this.getServiceName() + " service started");
 
         while (!this.isStopped()) {
             try {
-                PullRequest pullRequest = this.pullRequestQueue.take();
-                this.pullMessage(pullRequest);
+                PullRequest pullRequest = this.pullRequestQueue.take(); // 获取请求队列中的请求
+                this.pullMessage(pullRequest); // 拉取消息
             } catch (InterruptedException ignored) {
             } catch (Exception e) {
                 log.error("Pull Message Service Run Method exception", e);
