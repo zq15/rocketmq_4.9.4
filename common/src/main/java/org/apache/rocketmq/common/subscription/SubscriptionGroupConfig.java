@@ -19,6 +19,7 @@ package org.apache.rocketmq.common.subscription;
 
 import org.apache.rocketmq.common.MixAll;
 
+// 订阅组配置
 public class SubscriptionGroupConfig {
 
     private String groupName;
@@ -28,8 +29,10 @@ public class SubscriptionGroupConfig {
 
     private boolean consumeBroadcastEnable = true;
 
+    // 重试队列数量
     private int retryQueueNums = 1;
 
+    // 重试最大次数
     private int retryMaxTimes = 16;
 
     private long brokerId = MixAll.MASTER_ID;

@@ -93,6 +93,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                                                                   RemotingCommand request) throws RemotingCommandException {
         final SendMessageContext mqtraceContext;
         switch (request.getCode()) {
+            // 处理消费重试的入口
             case RequestCode.CONSUMER_SEND_MSG_BACK:
                 return this.asyncConsumerSendMsgBack(ctx, request);
             default:
@@ -117,6 +118,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             this.brokerController.getMessageStore().isTransientStorePoolDeficient();
     }
 
+    // 处理消费重试
     private CompletableFuture<RemotingCommand> asyncConsumerSendMsgBack(ChannelHandlerContext ctx,
                                                                         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
@@ -147,13 +149,15 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return CompletableFuture.completedFuture(response);
         }
 
-        String newTopic = MixAll.getRetryTopic(requestHeader.getGroup());
-        int queueIdInt = ThreadLocalRandom.current().nextInt(99999999) % subscriptionGroupConfig.getRetryQueueNums();
+        // 构建重试队列名称
+        String newTopic = MixAll.getRetryTopic(requestHeader.getGroup()); // %RETRY% + 消费组名称
+        int queueIdInt = ThreadLocalRandom.current().nextInt(99999999) % subscriptionGroupConfig.getRetryQueueNums(); // 随机选择重试队列
         int topicSysFlag = 0;
         if (requestHeader.isUnitMode()) {
             topicSysFlag = TopicSysFlag.buildSysFlag(false, true);
         }
 
+        // 创建或者获取 重试topic
         TopicConfig topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(
             newTopic,
             subscriptionGroupConfig.getRetryQueueNums(),
@@ -169,6 +173,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             response.setRemark(String.format("the topic[%s] sending message is forbidden", newTopic));
             return CompletableFuture.completedFuture(response);
         }
+        // 根据偏移量找到那一条消息
         MessageExt msgExt = this.brokerController.getMessageStore().lookMessageByOffset(requestHeader.getOffset());
         if (null == msgExt) {
             response.setCode(ResponseCode.SYSTEM_ERROR);
@@ -176,29 +181,31 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             return CompletableFuture.completedFuture(response);
         }
 
+        // 从消息中获取原始的 topic，保存
         final String retryTopic = msgExt.getProperty(MessageConst.PROPERTY_RETRY_TOPIC);
         if (null == retryTopic) {
             MessageAccessor.putProperty(msgExt, MessageConst.PROPERTY_RETRY_TOPIC, msgExt.getTopic());
         }
         msgExt.setWaitStoreMsgOK(false);
 
+        // 获取延迟级别和最大重试次数
         int delayLevel = requestHeader.getDelayLevel();
 
-        int maxReconsumeTimes = subscriptionGroupConfig.getRetryMaxTimes();
+        int maxReconsumeTimes = subscriptionGroupConfig.getRetryMaxTimes(); // 获取系统配置的最大重试次数
         if (request.getVersion() >= MQVersion.Version.V3_4_9.ordinal()) {
-            Integer times = requestHeader.getMaxReconsumeTimes();
+            Integer times = requestHeader.getMaxReconsumeTimes(); // 优先使用 用户配置的
             if (times != null) {
                 maxReconsumeTimes = times;
             }
         }
 
         if (msgExt.getReconsumeTimes() >= maxReconsumeTimes
-            || delayLevel < 0) {
-            newTopic = MixAll.getDLQTopic(requestHeader.getGroup());
+            || delayLevel < 0) { // 超过最大重试次数，进入死信队列
+            newTopic = MixAll.getDLQTopic(requestHeader.getGroup()); // newTopic = "%DLQ%" + consumerGroup
             queueIdInt = ThreadLocalRandom.current().nextInt(99999999) % DLQ_NUMS_PER_GROUP;
 
             topicConfig = this.brokerController.getTopicConfigManager().createTopicInSendMessageBackMethod(newTopic,
-                    DLQ_NUMS_PER_GROUP,
+                    DLQ_NUMS_PER_GROUP, // 固定是 1
                     PermName.PERM_WRITE | PermName.PERM_READ, 0);
 
             if (null == topicConfig) {
@@ -206,16 +213,17 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 response.setRemark("topic[" + newTopic + "] not exist");
                 return CompletableFuture.completedFuture(response);
             }
-            msgExt.setDelayTimeLevel(0);
+            msgExt.setDelayTimeLevel(0); // 死信队列不延迟
         } else {
-            if (0 == delayLevel) {
+            if (0 == delayLevel) { // 不指定，默认是 3 + 重试次数
                 delayLevel = 3 + msgExt.getReconsumeTimes();
             }
             msgExt.setDelayTimeLevel(delayLevel);
         }
 
+        // 构建重试消息
         MessageExtBrokerInner msgInner = new MessageExtBrokerInner();
-        msgInner.setTopic(newTopic);
+        msgInner.setTopic(newTopic); // 重试或者死信队列
         msgInner.setBody(msgExt.getBody());
         msgInner.setFlag(msgExt.getFlag());
         MessageAccessor.setProperties(msgInner, msgExt.getProperties());
@@ -227,13 +235,13 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
         msgInner.setBornTimestamp(msgExt.getBornTimestamp());
         msgInner.setBornHost(msgExt.getBornHost());
         msgInner.setStoreHost(msgExt.getStoreHost());
-        msgInner.setReconsumeTimes(msgExt.getReconsumeTimes() + 1);
+        msgInner.setReconsumeTimes(msgExt.getReconsumeTimes() + 1); // 重试次数 +1
 
         String originMsgId = MessageAccessor.getOriginMessageId(msgExt);
         MessageAccessor.setOriginMessageId(msgInner, UtilAll.isBlank(originMsgId) ? msgExt.getMsgId() : originMsgId);
         msgInner.setPropertiesString(MessageDecoder.messageProperties2String(msgExt.getProperties()));
 
-        CompletableFuture<PutMessageResult> putMessageResult = this.brokerController.getMessageStore().asyncPutMessage(msgInner);
+        CompletableFuture<PutMessageResult> putMessageResult = this.brokerController.getMessageStore().asyncPutMessage(msgInner); // 异步存储消息
         return putMessageResult.thenApply(r -> {
             if (r != null) {
                 switch (r.getPutMessageStatus()) {

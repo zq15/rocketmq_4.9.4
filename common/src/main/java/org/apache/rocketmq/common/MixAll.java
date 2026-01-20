@@ -103,7 +103,7 @@ public class MixAll {
     }
 
     public static String getRetryTopic(final String consumerGroup) {
-        return RETRY_GROUP_TOPIC_PREFIX + consumerGroup;
+        return RETRY_GROUP_TOPIC_PREFIX + consumerGroup; // %RETRY% + 消费组名称
     }
 
     public static String getReplyTopic(final String clusterName) {

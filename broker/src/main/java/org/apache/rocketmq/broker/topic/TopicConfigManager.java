@@ -230,18 +230,19 @@ public class TopicConfigManager extends ConfigManager {
         final int clientDefaultTopicQueueNums,
         final int perm,
         final int topicSysFlag) {
-        TopicConfig topicConfig = this.topicConfigTable.get(topic);
+        TopicConfig topicConfig = this.topicConfigTable.get(topic); // ConcurrentMap<String, TopicConfig>
+        // 第一层检查  ConcurrentMap 无锁读 ，减少加锁次数
         if (topicConfig != null)
             return topicConfig;
 
         boolean createNew = false;
 
         try {
-            if (this.topicConfigTableLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
+            if (this.topicConfigTableLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) { // 3s，
                 try {
                     topicConfig = this.topicConfigTable.get(topic);
-                    if (topicConfig != null)
-                        return topicConfig;
+                    if (topicConfig != null) // 双检锁，避免绕过
+                        return topicConfig; // 已有直接返回
 
                     topicConfig = new TopicConfig(topic);
                     topicConfig.setReadQueueNums(clientDefaultTopicQueueNums);
@@ -250,20 +251,21 @@ public class TopicConfigManager extends ConfigManager {
                     topicConfig.setTopicSysFlag(topicSysFlag);
 
                     log.info("create new topic {}", topicConfig);
-                    this.topicConfigTable.put(topic, topicConfig);
+                    this.topicConfigTable.put(topic, topicConfig);// topic -> topicConfig
                     createNew = true;
-                    this.dataVersion.nextVersion();
-                    this.persist();
+                    this.dataVersion.nextVersion(); // 版本号管理
+                    this.persist(); // 持久化到本地文件 $ROCKETMQ_HOME/store/config/topics.json
                 } finally {
                     this.topicConfigTableLock.unlock();
                 }
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException e) { // 可中断
             log.error("createTopicInSendMessageBackMethod exception", e);
         }
 
         if (createNew) {
-            this.brokerController.registerBrokerAll(false, true, true);
+            // 如果是新创建的向 namesrv 注册
+            this.brokerController.registerBrokerAll(false, true, true); // 单向发送
         }
 
         return topicConfig;
