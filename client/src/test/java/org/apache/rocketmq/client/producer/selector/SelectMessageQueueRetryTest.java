@@ -49,7 +49,7 @@ public class SelectMessageQueueRetryTest {
 
         Set<String> retryBrokerNameSet = retryBroker(topicPublishInfo);
         //always in Set （broker-0，broker-1，broker-2）
-        assertThat(retryBroker(topicPublishInfo)).isEqualTo(retryBrokerNameSet);
+        assertThat(retryBroker(topicPublishInfo)).isEqualTo(retryBrokerNameSet); // 保证会轮询到
     }
 
     private Set<String> retryBroker(TopicPublishInfo topicPublishInfo) {

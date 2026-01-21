@@ -21,13 +21,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.common.message.Message;
 
+// 请求-响应模式实现
 public class RequestResponseFuture {
-    private final String correlationId;
+    private final String correlationId; // 请求响应的标识
     private final RequestCallback requestCallback;
     private final long beginTimestamp = System.currentTimeMillis();
     private final Message requestMsg = null;
     private long timeoutMillis;
-    private CountDownLatch countDownLatch = new CountDownLatch(1);
+    private CountDownLatch countDownLatch = new CountDownLatch(1); // 阻塞同步，默认 1
     private volatile Message responseMsg = null;
     private volatile boolean sendRequestOk = true;
     private volatile Throwable cause = null;
@@ -53,11 +54,13 @@ public class RequestResponseFuture {
         return diff > this.timeoutMillis;
     }
 
+    // 阻塞等待
     public Message waitResponseMessage(final long timeout) throws InterruptedException {
         this.countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
         return this.responseMsg;
     }
 
+    // 放入响应消息，放行
     public void putResponseMessage(final Message responseMsg) {
         this.responseMsg = responseMsg;
         this.countDownLatch.countDown();

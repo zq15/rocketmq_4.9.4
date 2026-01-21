@@ -42,7 +42,7 @@ public class SelectMessageQueueByHashTest {
 
         String orderId = "123";
         String anotherOrderId = "234";
-        MessageQueue selected = selector.select(messageQueues, message, orderId);
+        MessageQueue selected = selector.select(messageQueues, message, orderId); // 用 orderId 的 hash 取余数
         assertThat(selector.select(messageQueues, message, anotherOrderId)).isNotEqualTo(selected);
 
         //No exception is thrown while order Id hashcode is Integer.MIN
