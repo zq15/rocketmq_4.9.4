@@ -19,6 +19,7 @@ package org.apache.rocketmq.client.common;
 
 import java.util.Random;
 
+// 线程级别的索引计数器,主要应用于消息队列的轮询选择,实现负载均衡
 public class ThreadLocalIndex {
     private final ThreadLocal<Integer> threadLocalIndex = new ThreadLocal<Integer>();
     private final Random random = new Random();
@@ -27,12 +28,13 @@ public class ThreadLocalIndex {
     public int incrementAndGet() {
         Integer index = this.threadLocalIndex.get();
         if (null == index) {
-            index = Math.abs(random.nextInt());
+            index = Math.abs(random.nextInt()); // 实现随机初始化
             this.threadLocalIndex.set(index);
         }
 
         this.threadLocalIndex.set(++index);
-        return Math.abs(index & POSITIVE_MASK);
+        return Math.abs(index & POSITIVE_MASK); // 避免了 Math.abs() 对 Integer.MAX_VALUE + 1 处理不当的陷阱
+//        return Math.abs(index);
     }
 
     @Override

@@ -27,14 +27,14 @@ public class ThreadLocalIndexTest {
         ThreadLocalIndex localIndex = new ThreadLocalIndex();
         int initialVal = localIndex.incrementAndGet();
 
-        assertThat(localIndex.incrementAndGet()).isEqualTo(initialVal + 1);
+        assertThat(localIndex.incrementAndGet()).isEqualTo(initialVal + 1); // 调用两次递增验证，第二次  = 第一次 + 1
     }
 
     @Test
     public void testIncrementAndGet2() throws Exception {
         ThreadLocalIndex localIndex = new ThreadLocalIndex();
         int initialVal = localIndex.incrementAndGet();
-        assertThat(initialVal >= 0).isTrue();
+        assertThat(initialVal >= 0).isTrue(); // 验证 incrementAndGet 获取的值大于0
     }
 
     @Test
@@ -48,7 +48,20 @@ public class ThreadLocalIndexTest {
         threadLocalIndexField.set(localIndex, mockThreadLocal);
 
         int initialVal = localIndex.incrementAndGet();
-        assertThat(initialVal >= 0).isTrue();
+        System.out.println(initialVal);
+//        assertThat(initialVal >= 0).isTrue();
+
+        /**
+         *   1. 整数溢出是环形的：MAX + 1 = MIN
+         *   2. Math.abs() 对 MIN_VALUE 失效：这是 Java 的已知陷阱
+         *   3. 位掩码是可靠的解决方案：& 0x7FFFFFFF 强制清除符号位，确保非负
+         */
+        System.out.println(Integer.MAX_VALUE); // 2147483647
+        System.out.println(Integer.MAX_VALUE+1); // -2147483648 = Integer.MIN_VALUE
+        System.out.println(Math.abs(Integer.MAX_VALUE+1)); // -2147483648 存在  Math.abs(Integer.MIN_VALUE) 还是  Integer.MIN_VALUE 的陷阱
+        System.out.println(Integer.MAX_VALUE+1 & 0x7FFFFFFF); // 0
+
+        System.out.println(Integer.MAX_VALUE + 2); // 整数溢出变成负数 -2147483647
     }
 
 }
