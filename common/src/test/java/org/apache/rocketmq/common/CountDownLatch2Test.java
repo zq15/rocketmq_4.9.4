@@ -19,14 +19,12 @@ package org.apache.rocketmq.common;
 
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * CountDownLatch2 Unit Test
@@ -119,5 +117,15 @@ public class CountDownLatch2Test {
         // coverage Sync#tryReleaseShared, c==0
         latch.countDown();
         assertEquals("Expected equal", 0, latch.getCount());
+    }
+
+    @Test
+    public void testNotReset() throws InterruptedException {
+        int count = 2;
+        CountDownLatch latch = new CountDownLatch(count);
+        latch.countDown();
+        assertEquals("Expected equal", count - 1, latch.getCount());
+//        latch.reset();
+        assertEquals("Expected equal", count - 1, latch.getCount());
     }
 }

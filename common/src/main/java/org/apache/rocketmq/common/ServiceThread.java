@@ -57,26 +57,31 @@ public abstract class ServiceThread implements Runnable {
         this.shutdown(false);
     }
 
+    /**
+     * 如果不设置需要中断，仅设置 started stopped 标志位
+     * 设置的话，可以中断线程，适合长时间运行的任务
+     * @param interrupt 是否需要中断
+     */
     public void shutdown(final boolean interrupt) {
         log.info("Try to shutdown service thread:{} started:{} lastThread:{}", getServiceName(), started.get(), thread);
-        if (!started.compareAndSet(true, false)) {
+        if (!started.compareAndSet(true, false)) { // cas 操作 started
             return;
         }
         this.stopped = true;
         log.info("shutdown thread " + this.getServiceName() + " interrupt " + interrupt);
 
         if (hasNotified.compareAndSet(false, true)) {
-            waitPoint.countDown(); // notify
+            waitPoint.countDown(); // notify 如果是 在等待返回，这里可以去唤醒
         }
 
         try {
-            if (interrupt) {
+            if (interrupt) { // 可选中断
                 this.thread.interrupt();
             }
 
             long beginTime = System.currentTimeMillis();
             if (!this.thread.isDaemon()) {
-                this.thread.join(this.getJointime());
+                this.thread.join(this.getJointime()); // 如果不是守护进程，等待结束 JOIN_TIME = 90 * 1000 ms // 非守护线程会随着 jvm 终止而终止
             }
             long elapsedTime = System.currentTimeMillis() - beginTime;
             log.info("join thread " + this.getServiceName() + " elapsed time(ms) " + elapsedTime + " "
@@ -112,6 +117,9 @@ public abstract class ServiceThread implements Runnable {
         }
     }
 
+    /**
+     * 如果服务已启动 started ，则设置 stopped 标志位
+     */
     public void makeStop() {
         if (!started.get()) {
             return;
@@ -126,16 +134,22 @@ public abstract class ServiceThread implements Runnable {
         }
     }
 
+    /**
+     * 有通知直接返回，没有阻塞等待
+     */
     protected void waitForRunning(long interval) {
+        // cas修改通知状态成功，可以返回 -> 快速判断
         if (hasNotified.compareAndSet(true, false)) {
             this.onWaitEnd();
             return;
         }
 
+        // 否则 reset
         //entry to wait
         waitPoint.reset();
 
         try {
+            // 然后阻塞等待
             waitPoint.await(interval, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             log.error("Interrupted", e);

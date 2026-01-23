@@ -139,7 +139,7 @@ public class CountDownLatch2 {
         return sync.getCount();
     }
 
-    public void reset() {
+    public void reset() { // 增加一个 reset
         sync.reset();
     }
 
@@ -190,6 +190,7 @@ public class CountDownLatch2 {
             }
         }
 
+        // 增加函数
         protected void reset() {
             setState(startCount);
         }
