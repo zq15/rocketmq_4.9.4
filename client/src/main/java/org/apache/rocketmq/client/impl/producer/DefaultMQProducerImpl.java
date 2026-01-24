@@ -498,7 +498,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         try {
             executor.submit(new Runnable() {
                 @Override
-                public void run() {
+                public void run() { // 给线程池去异步提交消息的
                     long costTime = System.currentTimeMillis() - beginStartTime;
                     if (timeout > costTime) {
                         try {
@@ -538,8 +538,8 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     private SendResult sendDefaultImpl(
         Message msg,
-        final CommunicationMode communicationMode,
-        final SendCallback sendCallback,
+        final CommunicationMode communicationMode, // SYNC ASYNC ONEWAY
+        final SendCallback sendCallback, // 如果是同步，传null
         final long timeout
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         this.makeSureStateOK();
@@ -548,7 +548,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         long beginTimestampFirst = System.currentTimeMillis();
         long beginTimestampPrev = beginTimestampFirst;
         long endTimestamp = beginTimestampFirst;
-        TopicPublishInfo topicPublishInfo = this.tryToFindTopicPublishInfo(msg.getTopic());
+        TopicPublishInfo topicPublishInfo = this.tryToFindTopicPublishInfo(msg.getTopic());// 获取topic路由信息
         if (topicPublishInfo != null && topicPublishInfo.ok()) {
             boolean callTimeout = false;
             MessageQueue mq = null;
@@ -558,6 +558,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             int timesTotal = communicationMode == CommunicationMode.SYNC ? 1 + this.defaultMQProducer.getRetryTimesWhenSendFailed() : 1;
             int times = 0;
             String[] brokersSent = new String[timesTotal];
+            // 重试循环
             for (; times < timesTotal; times++) {
                 String lastBrokerName = null == mq ? null : mq.getBrokerName();
                 // MessageQueue 的选择逻辑
@@ -582,12 +583,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         endTimestamp = System.currentTimeMillis();
                         this.updateFaultItem(mq.getBrokerName(), endTimestamp - beginTimestampPrev, false);
                         switch (communicationMode) {
+                            // 异步和单向不在这里重试
                             case ASYNC:
                                 return null;
                             case ONEWAY:
                                 return null;
                             case SYNC:
-                                if (sendResult.getSendStatus() != SendStatus.SEND_OK) {
+                                if (sendResult.getSendStatus() != SendStatus.SEND_OK) { // 失败重试
                                     if (this.defaultMQProducer.isRetryAnotherBrokerWhenNotStoreOK()) {
                                         continue;
                                     }
@@ -675,14 +677,15 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     private TopicPublishInfo tryToFindTopicPublishInfo(final String topic) {
+        // 先从本地缓存获取
         TopicPublishInfo topicPublishInfo = this.topicPublishInfoTable.get(topic);
-        if (null == topicPublishInfo || !topicPublishInfo.ok()) {
+        if (null == topicPublishInfo || !topicPublishInfo.ok()) { // 找不到去 namesrv
             this.topicPublishInfoTable.putIfAbsent(topic, new TopicPublishInfo());
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic);
             topicPublishInfo = this.topicPublishInfoTable.get(topic);
         }
 
-        if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) {
+        if (topicPublishInfo.isHaveTopicRouterInfo() || topicPublishInfo.ok()) { // 找到了返回
             return topicPublishInfo;
         } else {
             this.mQClientFactory.updateTopicRouteInfoFromNameServer(topic, true, this.defaultMQProducer);

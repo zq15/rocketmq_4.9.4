@@ -194,7 +194,7 @@ public class MQClientInstance {
                         continue;
                     }
 
-                    for (int i = 0; i < qd.getWriteQueueNums(); i++) {
+                    for (int i = 0; i < qd.getWriteQueueNums(); i++) { // 根据可写队列的数量，queueId 分别为 0 1 2 。。。 size
                         MessageQueue mq = new MessageQueue(topic, qd.getBrokerName(), i);
                         info.getMessageQueueList().add(mq);
                     }
@@ -884,7 +884,8 @@ public class MQClientInstance {
         this.unregisterClient(null, group);
     }
 
-    private void unregisterClient(final String producerGroup, final String consumerGroup) {
+    private void unregisterClient(final String producerGroup, final String consumerGroup) { // 公用一个
+        // 1. 遍历本地维护的 brokerAddrTable（所有已知的 Broker）
         Iterator<Entry<String, HashMap<Long, String>>> it = this.brokerAddrTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, HashMap<Long, String>> entry = it.next();
@@ -916,7 +917,7 @@ public class MQClientInstance {
             return false;
         }
 
-        MQProducerInner prev = this.producerTable.putIfAbsent(group, producer);
+        MQProducerInner prev = this.producerTable.putIfAbsent(group, producer); // 如果 key 存在则不插入，返回旧值
         if (prev != null) {
             log.warn("the producer group[{}] exist already.", group);
             return false;
@@ -998,12 +999,12 @@ public class MQClientInstance {
             found = brokerAddr != null;
 
             if (!found && slave) {
-                brokerAddr = map.get(brokerId + 1);
+                brokerAddr = map.get(brokerId + 1); // 尝试 brokerId +1
                 found = brokerAddr != null;
             }
 
             if (!found && !onlyThisBroker) {
-                Entry<Long, String> entry = map.entrySet().iterator().next();
+                Entry<Long, String> entry = map.entrySet().iterator().next(); // 降级到任意一个节点，
                 brokerAddr = entry.getValue();
                 slave = entry.getKey() != MixAll.MASTER_ID;
                 found = true;
@@ -1166,15 +1167,17 @@ public class MQClientInstance {
         return null;
     }
 
+    // 获取消费者信息
     public ConsumerRunningInfo consumerRunningInfo(final String consumerGroup) {
+        // 获取 消费者列表
         MQConsumerInner mqConsumerInner = this.consumerTable.get(consumerGroup);
         if (mqConsumerInner == null) {
             return null;
         }
 
-        ConsumerRunningInfo consumerRunningInfo = mqConsumerInner.consumerRunningInfo();
+        ConsumerRunningInfo consumerRunningInfo = mqConsumerInner.consumerRunningInfo(); // 调用消费者的方法获取运行时信息
 
-        List<String> nsList = this.mQClientAPIImpl.getRemotingClient().getNameServerAddressList();
+        List<String> nsList = this.mQClientAPIImpl.getRemotingClient().getNameServerAddressList(); // 获取 mamesrv 列表
 
         StringBuilder strBuilder = new StringBuilder();
         if (nsList != null) {
@@ -1184,7 +1187,7 @@ public class MQClientInstance {
         }
 
         String nsAddr = strBuilder.toString();
-        consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_NAMESERVER_ADDR, nsAddr);
+        consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_NAMESERVER_ADDR, nsAddr); // 设置 namesrv 信息
         consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_CONSUME_TYPE, mqConsumerInner.consumeType().name());
         consumerRunningInfo.getProperties().put(ConsumerRunningInfo.PROP_CLIENT_VERSION,
             MQVersion.getVersionDesc(MQVersion.CURRENT_VERSION));

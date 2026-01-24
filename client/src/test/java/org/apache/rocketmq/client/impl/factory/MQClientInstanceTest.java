@@ -58,8 +58,10 @@ public class MQClientInstanceTest {
         FieldUtils.writeDeclaredField(mqClientInstance, "brokerAddrTable", brokerAddrTable, true);
     }
 
+    // 从主题路由信息到发布信息
     @Test
     public void testTopicRouteData2TopicPublishInfo() {
+        // TopicRouteData -> broker 和 queue 信息
         TopicRouteData topicRouteData = new TopicRouteData();
 
         topicRouteData.setFilterServerTable(new HashMap<String, List<String>>());
@@ -71,7 +73,7 @@ public class MQClientInstanceTest {
         brokerAddrs.put(0L, "127.0.0.1:10911");
         brokerData.setBrokerAddrs(brokerAddrs);
         brokerDataList.add(brokerData);
-        topicRouteData.setBrokerDatas(brokerDataList);
+        topicRouteData.setBrokerDatas(brokerDataList); // 设置broker信息
 
         List<QueueData> queueDataList = new ArrayList<QueueData>();
         QueueData queueData = new QueueData();
@@ -81,7 +83,7 @@ public class MQClientInstanceTest {
         queueData.setWriteQueueNums(4);
         queueData.setTopicSysFlag(0);
         queueDataList.add(queueData);
-        topicRouteData.setQueueDatas(queueDataList);
+        topicRouteData.setQueueDatas(queueDataList); // 设置队列信息
 
         TopicPublishInfo topicPublishInfo = MQClientInstance.topicRouteData2TopicPublishInfo(topic, topicRouteData);
 
@@ -119,6 +121,7 @@ public class MQClientInstanceTest {
 
     @Test
     public void testRegisterProducer() {
+        // 测试重复注册同一个 group 的 producer
         boolean flag = mqClientInstance.registerProducer(group, mock(DefaultMQProducerImpl.class));
         assertThat(flag).isTrue();
 
@@ -146,19 +149,23 @@ public class MQClientInstanceTest {
 
     @Test
     public void testConsumerRunningInfoWhenConsumersIsEmptyOrNot() throws RemotingException, InterruptedException, MQBrokerException {
+        // 测试不同请款下获取消费者运行情况
+
         MQConsumerInner mockConsumerInner = mock(MQConsumerInner.class);
         ConsumerRunningInfo mockConsumerRunningInfo = mock(ConsumerRunningInfo.class);
         when(mockConsumerInner.consumerRunningInfo()).thenReturn(mockConsumerRunningInfo);
         when(mockConsumerInner.consumeType()).thenReturn(ConsumeType.CONSUME_PASSIVELY);
         Properties properties = new Properties();
         when(mockConsumerRunningInfo.getProperties()).thenReturn(properties);
-        mqClientInstance.unregisterConsumer(group);
+        mqClientInstance.unregisterConsumer(group); // 确保消费者没有注册
 
+        // 消费者不存在，返回null
         ConsumerRunningInfo runningInfo = mqClientInstance.consumerRunningInfo(group);
         assertThat(runningInfo).isNull();
         boolean flag = mqClientInstance.registerConsumer(group, mockConsumerInner);
         assertThat(flag).isTrue();
 
+        // 消费者存在的时候，返回运行信息
         runningInfo = mqClientInstance.consumerRunningInfo(group);
         assertThat(runningInfo).isNotNull();
         assertThat(mockConsumerInner.consumerRunningInfo().getProperties().get(ConsumerRunningInfo.PROP_CONSUME_TYPE));

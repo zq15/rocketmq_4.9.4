@@ -78,7 +78,7 @@ public class TopicPublishInfo {
                 if (pos < 0)
                     pos = 0;
                 MessageQueue mq = this.messageQueueList.get(pos);
-                if (!mq.getBrokerName().equals(lastBrokerName)) {
+                if (!mq.getBrokerName().equals(lastBrokerName)) { // 多传一个 lastBrokerName ，如果遇到上次的，会再试一次，尽量避开上次（失败的）queue
                     return mq;
                 }
             }

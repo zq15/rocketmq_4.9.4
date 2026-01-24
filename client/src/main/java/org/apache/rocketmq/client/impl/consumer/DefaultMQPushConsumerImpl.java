@@ -1068,8 +1068,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         info.setProperties(prop);
 
         Set<SubscriptionData> subSet = this.subscriptions();
-        info.getSubscriptionSet().addAll(subSet);
+        info.getSubscriptionSet().addAll(subSet); // 订阅信息
 
+        // 队列信息
         Iterator<Entry<MessageQueue, ProcessQueue>> it = this.rebalanceImpl.getProcessQueueTable().entrySet().iterator();
         while (it.hasNext()) {
             Entry<MessageQueue, ProcessQueue> next = it.next();
@@ -1077,13 +1078,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             ProcessQueue pq = next.getValue();
 
             ProcessQueueInfo pqinfo = new ProcessQueueInfo();
-            pqinfo.setCommitOffset(this.offsetStore.readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE));
+            pqinfo.setCommitOffset(this.offsetStore.readOffset(mq, ReadOffsetType.MEMORY_FIRST_THEN_STORE)); // 消费进度
             pq.fillProcessQueueInfo(pqinfo);
             info.getMqTable().put(mq, pqinfo);
         }
 
         for (SubscriptionData sd : subSet) {
-            ConsumeStatus consumeStatus = this.mQClientFactory.getConsumerStatsManager().consumeStatus(this.groupName(), sd.getTopic());
+            ConsumeStatus consumeStatus = this.mQClientFactory.getConsumerStatsManager().consumeStatus(this.groupName(), sd.getTopic()); // 消费状态
             info.getStatusTable().put(sd.getTopic(), consumeStatus);
         }
 

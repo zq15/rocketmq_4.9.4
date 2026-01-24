@@ -87,7 +87,7 @@ public class DefaultMQProducerTest {
         String producerGroupTemp = producerGroupPrefix + System.currentTimeMillis();
         producer = new DefaultMQProducer(producerGroupTemp);
         producer.setNamesrvAddr("127.0.0.1:9876");
-        producer.setCompressMsgBodyOverHowmuch(16);
+        producer.setCompressMsgBodyOverHowmuch(16); // 16b 默认 4kb
         message = new Message(topic, new byte[] {'a'});
         zeroMsg = new Message(topic, new byte[] {});
         bigMessage = new Message(topic, "This is a very huge message!".getBytes());
