@@ -29,15 +29,15 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class ConsumerRunningInfo extends RemotingSerializable {
     public static final String PROP_NAMESERVER_ADDR = "PROP_NAMESERVER_ADDR";
-    public static final String PROP_THREADPOOL_CORE_SIZE = "PROP_THREADPOOL_CORE_SIZE";
-    public static final String PROP_CONSUME_ORDERLY = "PROP_CONSUMEORDERLY";
-    public static final String PROP_CONSUME_TYPE = "PROP_CONSUME_TYPE";
+    public static final String PROP_THREADPOOL_CORE_SIZE = "PROP_THREADPOOL_CORE_SIZE";  // 消费线程池大小
+    public static final String PROP_CONSUME_ORDERLY = "PROP_CONSUMEORDERLY"; // 是否顺序消费
+    public static final String PROP_CONSUME_TYPE = "PROP_CONSUME_TYPE"; // push pull
     public static final String PROP_CLIENT_VERSION = "PROP_CLIENT_VERSION";
     public static final String PROP_CONSUMER_START_TIMESTAMP = "PROP_CONSUMER_START_TIMESTAMP";
 
     private Properties properties = new Properties();
 
-    private TreeSet<SubscriptionData> subscriptionSet = new TreeSet<SubscriptionData>();
+    private TreeSet<SubscriptionData> subscriptionSet = new TreeSet<SubscriptionData>(); // 订阅信息集合
 
     private TreeMap<MessageQueue, ProcessQueueInfo> mqTable = new TreeMap<MessageQueue, ProcessQueueInfo>();
 
