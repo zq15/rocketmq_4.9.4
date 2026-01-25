@@ -27,10 +27,13 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
 public interface RemotingClient extends RemotingService {
 
+    // 更新 namesrv 地址
     void updateNameServerAddressList(final List<String> addrs);
 
+    // 获取 namesrv 地址
     List<String> getNameServerAddressList();
 
+    // 发送三种消息
     RemotingCommand invokeSync(final String addr, final RemotingCommand request,
         final long timeoutMillis) throws InterruptedException, RemotingConnectException,
         RemotingSendRequestException, RemotingTimeoutException;
@@ -43,6 +46,7 @@ public interface RemotingClient extends RemotingService {
         throws InterruptedException, RemotingConnectException, RemotingTooMuchRequestException,
         RemotingTimeoutException, RemotingSendRequestException;
 
+    // 处理器注册
     void registerProcessor(final int requestCode, final NettyRequestProcessor processor,
         final ExecutorService executor);
 
