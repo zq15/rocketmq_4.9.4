@@ -242,7 +242,7 @@ public class MQClientInstance {
                     // Start various schedule tasks
                     this.startScheduledTask();
                     // Start pull service
-                    this.pullMessageService.start(); // 开始拉取消息
+                    this.pullMessageService.start();
                     // Start rebalance service
                     this.rebalanceService.start();
                     // Start push service
@@ -958,11 +958,11 @@ public class MQClientInstance {
     }
 
     public void doRebalance() {
-        for (Map.Entry<String, MQConsumerInner> entry : this.consumerTable.entrySet()) {
+        for (Map.Entry<String, MQConsumerInner> entry : this.consumerTable.entrySet()) { // 遍历消费者表
             MQConsumerInner impl = entry.getValue();
             if (impl != null) {
                 try {
-                    impl.doRebalance();
+                    impl.doRebalance(); // 执行消费者的 doRebalance
                 } catch (Throwable e) {
                     log.error("doRebalance exception", e);
                 }

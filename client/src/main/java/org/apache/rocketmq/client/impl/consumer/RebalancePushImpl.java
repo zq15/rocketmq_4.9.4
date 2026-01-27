@@ -149,6 +149,7 @@ public class RebalancePushImpl extends RebalanceImpl {
         return result;
     }
 
+    // 计算从哪里开始消费 todo
     @Override
     public long computePullFromWhereWithException(MessageQueue mq) throws MQClientException {
         long result = -1;
