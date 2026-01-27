@@ -60,7 +60,7 @@ public class RemotingCommand {
     private static volatile int configVersion = -1;
     private static AtomicInteger requestId = new AtomicInteger(0);
 
-    private static SerializeType serializeTypeConfigInThisServer = SerializeType.JSON;
+    private static SerializeType serializeTypeConfigInThisServer = SerializeType.JSON; // 序列化
 
     static {
         final String protocol = System.getProperty(SERIALIZE_TYPE_PROPERTY, System.getenv(SERIALIZE_TYPE_ENV));
@@ -73,18 +73,19 @@ public class RemotingCommand {
         }
     }
 
-    private int code;
-    private LanguageCode language = LanguageCode.JAVA;
-    private int version = 0;
-    private int opaque = requestId.getAndIncrement();
-    private int flag = 0;
-    private String remark;
-    private HashMap<String, String> extFields;
-    private transient CommandCustomHeader customHeader;
+    // 核心字段
+    private int code; // 请求/响应码
+    private LanguageCode language = LanguageCode.JAVA; // 语言标识 默认 java
+    private int version = 0; // 版本号
+    private int opaque = requestId.getAndIncrement(); // 请求 ID
+    private int flag = 0; // 标识位
+    private String remark; // 备注信息
+    private HashMap<String, String> extFields; // 扩展字段
+    private transient CommandCustomHeader customHeader; // 自定义头信息
 
     private SerializeType serializeTypeCurrentRPC = serializeTypeConfigInThisServer;
 
-    private transient byte[] body;
+    private transient byte[] body; // 消息体
 
     protected RemotingCommand() {
     }
@@ -223,6 +224,10 @@ public class RemotingCommand {
     }
 
     public static int markProtocolType(int source, SerializeType type) {
+        // 四个字节中的 第一个字节 存储序列化方式，剩下三个字节存储长度
+        /**
+         * 手动设置第一个字节，清空剩下三个字节
+         */
         return (type.getCode() << 24) | (source & 0x00FFFFFF);
     }
 

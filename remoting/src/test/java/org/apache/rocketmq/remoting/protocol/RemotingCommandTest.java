@@ -28,6 +28,7 @@ import org.junit.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RemotingCommandTest {
+    //标识 协议类型
     @Test
     public void testMarkProtocolType_JSONProtocolType() {
         int source = 261;
@@ -35,10 +36,15 @@ public class RemotingCommandTest {
 
         byte[] result = new byte[4];
         int x = RemotingCommand.markProtocolType(source, type);
-        result[0] = (byte) (x >> 24);
-        result[1] = (byte) (x >> 16);
-        result[2] = (byte) (x >> 8);
-        result[3] = (byte) x;
+        /**
+         *  int x 占 32 位（4 字节）：
+         *   [最高字节] [第2字节] [第3字节] [最低字节]
+         *    byte0      byte1     byte2     byte3
+         */
+        result[0] = (byte) (x >> 24); //总共 4*8=32  右移 24 位，留下8位, 提取第1字节 (最高位)
+        result[1] = (byte) (x >> 16); // 第2字节
+        result[2] = (byte) (x >> 8); // 第3字节
+        result[3] = (byte) x; // 第4字节
         assertThat(result).isEqualTo(new byte[] {0, 0, 1, 5});
     }
 
@@ -55,15 +61,18 @@ public class RemotingCommandTest {
         assertThat(result).isEqualTo(new byte[] {1, -1, -1, -1});
     }
 
+    // 创建不同请求与响应
     @Test
     public void testCreateRequestCommand_RegisterBroker() {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, "2333");
 
+        // 创建 REGISTER_BROKER 指令
         int code = 103; //org.apache.rocketmq.common.protocol.RequestCode.REGISTER_BROKER
         CommandCustomHeader header = new SampleCommandCustomHeader();
         RemotingCommand cmd = RemotingCommand.createRequestCommand(code, header);
         assertThat(cmd.getCode()).isEqualTo(code);
         assertThat(cmd.getVersion()).isEqualTo(2333);
+        // cmd.getFlag() & 0x01 只保留最低位 -> 标识是请求还是响应 0 请求 1 响应
         assertThat(cmd.getFlag() & 0x01).isEqualTo(0); //flag bit 0: 0 presents request
     }
 
@@ -114,25 +123,35 @@ public class RemotingCommandTest {
         assertThat(cmd.getFlag() & 0x01).isEqualTo(1); //flag bit 0: 1 presents response
     }
 
+    // 编解码
     @Test
-    public void testEncodeAndDecode_EmptyBody() {
+    public void testEncodeAndDecode_EmptyBody() { // 空 body
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, "2333");
 
         int code = 103; //org.apache.rocketmq.common.protocol.RequestCode.REGISTER_BROKER
         CommandCustomHeader header = new SampleCommandCustomHeader();
         RemotingCommand cmd = RemotingCommand.createRequestCommand(code, header);
 
+        /**
+         * 完整数据包结构：
+         *          ┌──────────────┬─────────────┬──────────┐
+         *          │   4 字节      │  header长度  │   body   │
+         *          │  总长度字段   │   (JSON等)   │  (可选)  │
+         *          └──────────────┴─────────────┴──────────┘
+         *          ↑
+         *          这个字段记录后面所有数据的长度
+         */
         ByteBuffer buffer = cmd.encode();
 
         //Simulate buffer being read in NettyDecoder
-        buffer.getInt();
-        byte[] bytes = new byte[buffer.limit() - 4];
+        buffer.getInt(); // 跳过第一个长度字段
+        byte[] bytes = new byte[buffer.limit() - 4]; // 存储后面的header+body
         buffer.get(bytes, 0, buffer.limit() - 4);
-        buffer = ByteBuffer.wrap(bytes);
+        buffer = ByteBuffer.wrap(bytes); // 把 bytes 重新包装成 ByteBuffer
 
         RemotingCommand decodedCommand = null;
         try {
-            decodedCommand = RemotingCommand.decode(buffer);
+            decodedCommand = RemotingCommand.decode(buffer); // 解码
 
             assertThat(decodedCommand.getSerializeTypeCurrentRPC()).isEqualTo(SerializeType.JSON);
             assertThat(decodedCommand.getBody()).isNull();
@@ -144,7 +163,7 @@ public class RemotingCommandTest {
     }
 
     @Test
-    public void testEncodeAndDecode_FilledBody() {
+    public void testEncodeAndDecode_FilledBody() { // 有 body
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, "2333");
 
         int code = 103; //org.apache.rocketmq.common.protocol.RequestCode.REGISTER_BROKER
