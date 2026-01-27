@@ -30,7 +30,7 @@ public class MQClientManager {
     private static MQClientManager instance = new MQClientManager();
     private AtomicInteger factoryIndexGenerator = new AtomicInteger();
     private ConcurrentMap<String/* clientId */, MQClientInstance> factoryTable =
-        new ConcurrentHashMap<String, MQClientInstance>();
+        new ConcurrentHashMap<String, MQClientInstance>(); // 全局存储 client 实例的位置
 
     private MQClientManager() {
 
@@ -51,7 +51,7 @@ public class MQClientManager {
         if (null == instance) {
             instance =
                 new MQClientInstance(clientConfig.cloneClientConfig(),
-                    this.factoryIndexGenerator.getAndIncrement(), clientId, rpcHook);
+                    this.factoryIndexGenerator.getAndIncrement(), clientId, rpcHook); // 创建一个新的 里面还会创建 apiImpl pullService rebalanceService
             MQClientInstance prev = this.factoryTable.putIfAbsent(clientId, instance);
             if (prev != null) {
                 instance = prev;

@@ -27,6 +27,12 @@
     <logger name="RocketmqCommon" level="INFO" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
+
+    <!-- Suppress Netty verbose logging -->
+    <logger name="io.netty" level="ERROR" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>

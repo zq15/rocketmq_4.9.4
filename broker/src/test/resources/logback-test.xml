@@ -25,6 +25,11 @@
         </encoder>
     </appender>
 
+    <!-- Suppress Netty verbose logging -->
+    <logger name="io.netty" level="ERROR" additivity="false">
+        <appender-ref ref="DefaultAppender"/>
+    </logger>
+
     <root>
         <level value="OFF"/>
         <appender-ref ref="DefaultAppender"/>

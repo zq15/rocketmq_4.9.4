@@ -449,6 +449,7 @@ public class MQClientAPIImpl {
         return sendMessage(addr, brokerName, msg, requestHeader, timeoutMillis, communicationMode, null, null, null, 0, context, producer);
     }
 
+    // 真正走到的发送消息的实现
     public SendResult sendMessage(
         final String addr,
         final String brokerName,
@@ -523,7 +524,7 @@ public class MQClientAPIImpl {
     ) throws RemotingException, MQBrokerException, InterruptedException {
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis); // 阻塞调用
         assert response != null;
-        return this.processSendResponse(brokerName, msg, response, addr);
+        return this.processSendResponse(brokerName, msg, response, addr); // 结果处理
     }
 
     // 异步发送，自动重试
@@ -687,29 +688,30 @@ public class MQClientAPIImpl {
                 throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
             }
         }
-        // 解码header
+        // 解码header msgId queueId queueOffset transactionId
         SendMessageResponseHeader responseHeader =
             (SendMessageResponseHeader) response.decodeCommandCustomHeader(SendMessageResponseHeader.class);
 
-        //If namespace not null , reset Topic without namespace.
+        //If namespace not null , reset Topic without namespace. 移除主题的namespace前缀
         String topic = msg.getTopic();
         if (StringUtils.isNotEmpty(this.clientConfig.getNamespace())) {
             topic = NamespaceUtil.withoutNamespace(topic, this.clientConfig.getNamespace());
         }
 
-        MessageQueue messageQueue = new MessageQueue(topic, brokerName, responseHeader.getQueueId()); // 构建 messageQueue
+        MessageQueue messageQueue = new MessageQueue(topic, brokerName, responseHeader.getQueueId()); // 构建 messageQueue 标识消息发送到了哪个队列
 
-        String uniqMsgId = MessageClientIDSetter.getUniqID(msg);
+        // 处理唯一消息 id 客户端生成-> 全局唯一
+        String uniqMsgId = MessageClientIDSetter.getUniqID(msg); // 7F00000162CC18B4AAC287E7E8DE0000
         if (msg instanceof MessageBatch) { // 特殊处理 批量消息
             StringBuilder sb = new StringBuilder();
             for (Message message : (MessageBatch) msg) {
-                sb.append(sb.length() == 0 ? "" : ",").append(MessageClientIDSetter.getUniqID(message));
+                sb.append(sb.length() == 0 ? "" : ",").append(MessageClientIDSetter.getUniqID(message)); // 批量消息: 拼接所有消息的 UniqID，用逗号分隔 "id1,id2,id3"
             }
             uniqMsgId = sb.toString();
         }
-        SendResult sendResult = new SendResult(sendStatus, // 构建响应结果
+        SendResult sendResult = new SendResult(sendStatus, // 构建响应结果 发送状态
             uniqMsgId,
-            responseHeader.getMsgId(), messageQueue, responseHeader.getQueueOffset()); // 队列偏移量
+            responseHeader.getMsgId(), messageQueue, responseHeader.getQueueOffset()); // msgId AC17800100002A9F0000000001009EDE 物理偏移量 队列偏移量 382
         sendResult.setTransactionId(responseHeader.getTransactionId());
         // 设置链路追踪信息
         String regionId = response.getExtFields().get(MessageConst.PROPERTY_MSG_REGION);
