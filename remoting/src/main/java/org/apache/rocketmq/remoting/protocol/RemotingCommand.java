@@ -387,7 +387,7 @@ public class RemotingCommand {
     }
 
     private byte[] headerEncode() {
-        this.makeCustomHeaderToNet();
+        this.makeCustomHeaderToNet(); // 也会把 header 当中的信息放到 extFields
         if (SerializeType.ROCKETMQ == serializeTypeCurrentRPC) {
             return RocketMQSerializable.rocketMQProtocolEncode(this);
         } else {
@@ -415,7 +415,7 @@ public class RemotingCommand {
                         }
 
                         if (value != null) {
-                            this.extFields.put(name, value.toString());
+                            this.extFields.put(name, value.toString()); // 把 header 的值也放入 extFields
                         }
                     }
                 }

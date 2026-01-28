@@ -213,6 +213,7 @@ public class RemotingCommandTest {
         try {
             decodedCommand = RemotingCommand.decode(buffer);
 
+            // header 和额外扩展字段都存储在 extFields
             assertThat(decodedCommand.getExtFields().get("stringValue")).isEqualTo("bilibili");
             assertThat(decodedCommand.getExtFields().get("intValue")).isEqualTo("2333");
             assertThat(decodedCommand.getExtFields().get("longValue")).isEqualTo("23333333");
