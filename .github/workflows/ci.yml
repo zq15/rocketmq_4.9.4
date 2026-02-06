@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ai_review:
+    name: Claude Commit Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Check AI API key presence
+        id: keycheck
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MINIMAX_API_KEY}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "MINIMAX_API_KEY is not set; skipping Claude commit analysis." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Claude Code (MiniMax)
+        if: steps.keycheck.outputs.enabled == 'true'
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.claude
+
+          # Step1: ~/.claude/settings.json
+          cat > ~/.claude/settings.json <<EOF
+          {
+            "env": {
+              "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
+              "ANTHROPIC_AUTH_TOKEN": "${MINIMAX_API_KEY}",
+              "API_TIMEOUT_MS": "3000000",
+              "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+              "ANTHROPIC_MODEL": "MiniMax-M2.1",
+              "ANTHROPIC_SMALL_FAST_MODEL": "MiniMax-M2.1",
+              "ANTHROPIC_DEFAULT_SONNET_MODEL": "MiniMax-M2.1",
+              "ANTHROPIC_DEFAULT_OPUS_MODEL": "MiniMax-M2.1",
+              "ANTHROPIC_DEFAULT_HAIKU_MODEL": "MiniMax-M2.1"
+            }
+          }
+          EOF
+
+          # Step2: ~/.claude.json
+          cat > ~/.claude.json <<'EOF'
+          {
+            "hasCompletedOnboarding": true
+          }
+          EOF
+
+      - name: Analyze current commit with Claude
+        id: analyze
+        if: steps.keycheck.outputs.enabled == 'true'
+        env:
+          ANTHROPIC_BASE_URL: https://api.minimax.io/anthropic
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          git show -s --no-color --format=fuller "${GITHUB_SHA}" > commit.txt
+          cat commit.txt | claude -p "请根据下面的提交信息做简要分析：这次改动的目的是什么？可能的风险点/回滚点是什么？用中文、要点列表输出。" > analysis.md
+
+          {
+            echo "## Commit"
+            echo
+            echo '```'
+            cat commit.txt
+            echo '```'
+            echo
+            echo "## Claude analysis"
+            echo
+            cat analysis.md
+          } >> "$GITHUB_STEP_SUMMARY"
